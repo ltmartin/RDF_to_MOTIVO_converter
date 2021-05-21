@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 public class QueryExecutor extends Thread {
     private final Logger logger = Logger.getLogger(QueryExecutor.class.getName());
 
+    public static final String COUNT_VAR_NAME = "?count";
+
     private String endpoint;
     private String query;
     private Set<Triple> results;
@@ -23,10 +25,10 @@ public class QueryExecutor extends Thread {
     }
 
     public void run(){
-        this.runQuery();
+        this.runSelectQuery();
     }
 
-    private Set<Triple> runQuery(){
+    public Set<Triple> runSelectQuery(){
         Assert.notNull(query, "The query must be set in advance.");
         results = new HashSet<>();
         try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
@@ -45,6 +47,25 @@ public class QueryExecutor extends Thread {
             System.out.println("===============================================");
         }
         return results;
+    }
+
+    public Integer runCountQuery(){
+        Assert.notNull(query, "The query must be set in advance.");
+        Integer countResult = 0;
+
+        try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
+            ResultSet rs = qexec.execSelect();
+            while (rs.hasNext()) {
+                QuerySolution row = rs.next();
+                countResult = row.get(COUNT_VAR_NAME).asLiteral().getInt();
+            }
+        } catch (QueryParseException e){
+            System.out.println("===============================================");
+            logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
+            System.out.println("===============================================");
+        }
+
+        return countResult;
     }
 
     public Set<Triple> getResults() {
