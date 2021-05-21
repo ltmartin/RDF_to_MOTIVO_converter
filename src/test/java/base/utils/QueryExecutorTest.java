@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
 import java.util.Set;
 
 @SpringBootTest(classes = Application.class)
