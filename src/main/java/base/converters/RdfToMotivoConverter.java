@@ -53,6 +53,28 @@ public class RdfToMotivoConverter {
         });
 
         writeInputFile();
+        writeReplacementsFile();
+    }
+
+    private void writeReplacementsFile() {
+        final String fileName = "replacements.txt";
+        File file = new File(fileName);
+        try {
+            if (file.createNewFile()){
+                BufferedWriter writer = new BufferedWriter(new FileWriter(fileName, ENCODING));
+                replacementsMap.forEach((original, replacement) ->{
+                    try {
+                        writer.write(original + " " + Integer.toString(replacement));
+                        writer.newLine();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+                writer.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void writeInputFile() {
