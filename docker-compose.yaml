@@ -1,0 +1,25 @@
+version: "3.3"
+
+services:
+  converter:
+    depends_on:
+      - virtuoso
+    links:
+        - virtuoso
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rdf_to_motivo_converter:latest
+    restart: on-failure
+    stdin_open: true
+    tty: true
+    volumes:
+      - /tmp/converterOutput/:/converter/output
+
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:latest
+    restart: always
+    volumes:
+    - /home/leandro/Installations/virtuoso-opensource/database:/database
+    ports:
+    - "8890:8890"
