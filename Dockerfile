@@ -4,7 +4,7 @@ RUN yum update -y && yum upgrade -y
 RUN yum install -y java-11-openjdk.x86_64
 RUN mkdir converter
 COPY target/RDF_to_MOTIVO_converter-1.0.jar /converter/
-COPY target/classes/application.properties /converter/
+COPY src/main/resources/application.properties /converter/
 WORKDIR /converter
 RUN mkdir output
 VOLUME ["/converter/output"]
