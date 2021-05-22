@@ -9,7 +9,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: rdf_to_motivo_converter:latest
+    image: ltmartin/rdf_to_motivo_converter:latest
     restart: on-failure
     stdin_open: true
     tty: true
