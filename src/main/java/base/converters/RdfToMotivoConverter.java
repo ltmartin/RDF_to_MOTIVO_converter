@@ -57,7 +57,7 @@ public class RdfToMotivoConverter {
     }
 
     private void writeReplacementsFile() {
-        final String fileName = "replacements.txt";
+        final String fileName = "output/replacements.txt";
         File file = new File(fileName);
         try {
             if (file.createNewFile()){
@@ -78,7 +78,7 @@ public class RdfToMotivoConverter {
     }
 
     private void writeInputFile() {
-        final String fileName = "input.txt";
+        final String fileName = "output/input.txt";
         File file = new File(fileName);
         try {
             if (file.createNewFile()){
