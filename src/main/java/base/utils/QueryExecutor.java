@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.RecursiveTask;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,9 +37,12 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
 
     public Set<Triple> runSelectQuery() {
         Assert.notNull(query, "The query must be set in advance.");
+        logger.log(Level.INFO, "Processing query: " + query);
         results = new HashSet<>();
         try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
+            qexec.setTimeout(5, TimeUnit.MINUTES);
             ResultSet rs = qexec.execSelect();
+            logger.log(Level.INFO, "Query results obtained.");
             while (rs.hasNext()) {
                 QuerySolution row = rs.next();
                 Node subject = row.get("?s").asNode();
@@ -47,6 +51,7 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
                 Triple triple = new Triple(subject, predicate, object);
                 results.add(triple);
             }
+            logger.log(Level.INFO, "Query results processed.");
         } catch (QueryParseException e) {
             System.out.println("===============================================");
             logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
@@ -90,19 +95,16 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
         else {
 
             final Integer cpuCount = Runtime.getRuntime().availableProcessors();
-            final Integer triplesPerCpu = amountOfTriplesInDataset / cpuCount;
+            final Integer triplesPerQuery = 5000;
+            Integer triplesRetrieved = 0;
 
-            for (int i = 0; i < cpuCount - 1; i++) {
-                String query = "SELECT DISTINCT ?s ?p ?o FROM <" + datasetIri + "> WHERE {?s ?p ?o} LIMIT " + triplesPerCpu.toString() + " OFFSET " + i * triplesPerCpu;
+            for (int i = 0; triplesRetrieved < amountOfTriplesInDataset; i++) {
+                String query = "SELECT DISTINCT ?s ?p ?o FROM <" + datasetIri + "> WHERE {?s ?p ?o} LIMIT " + triplesPerQuery.toString() + " OFFSET " + i * triplesPerQuery;
+                triplesRetrieved += 5000;
                 QueryExecutor queryExecutor = new QueryExecutor(endpoint, query, datasetIri, amountOfTriplesInDataset);
                 queryExecutor.setRunQuery(true);
                 executors.add(queryExecutor);
             }
-
-            String query = "SELECT DISTINCT ?s ?p ?o FROM <" + datasetIri + "> WHERE {?s ?p ?o} LIMIT " + amountOfTriplesInDataset + " OFFSET " + ((cpuCount - 1) * triplesPerCpu);
-            QueryExecutor queryExecutor = new QueryExecutor(endpoint, query, datasetIri, amountOfTriplesInDataset);
-            queryExecutor.setRunQuery(true);
-            executors.add(queryExecutor);
 
             for (int i = 0; i < executors.size() - 1; i++) {
                 executors.get(i).fork();
