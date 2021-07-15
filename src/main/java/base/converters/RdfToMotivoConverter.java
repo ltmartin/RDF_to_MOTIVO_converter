@@ -1,5 +1,6 @@
 package base.converters;
 
+import base.Application;
 import base.utils.QueryExecutor;
 import org.apache.commons.collections.set.SynchronizedSet;
 import org.apache.jena.graph.Node;
@@ -14,14 +15,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Component
 @Lazy
 public class RdfToMotivoConverter {
+    private final Logger logger = Logger.getLogger(Application.class.getName());
+
     private final static Charset ENCODING = StandardCharsets.UTF_8;
     @Value("${sparql.endpoint}")
     private String endpoint;
@@ -29,7 +35,7 @@ public class RdfToMotivoConverter {
     private String datasetIri;
 
     private ConcurrentMap<String, Integer> replacementsMap;
-    private ConcurrentMap<Integer, LinkedList<Integer>> connections;
+    private ConcurrentMap<Integer, Set<Integer>> connections;
     private Integer id = 0;
     private Integer numberOfEdges = 0;
     private Set<Triple> triples;
@@ -40,7 +46,8 @@ public class RdfToMotivoConverter {
     }
 
     public void convert() {
-
+        System.out.println("Convert");
+        logger.log(Level.ALL, "Convert");
         final String triplesCountQuery = "SELECT (count(*) AS " + QueryExecutor.COUNT_VAR_NAME + ") FROM <" + datasetIri + "> WHERE {?s ?p ?o}";
         final QueryExecutor countQueryExecutor = new QueryExecutor(endpoint, triplesCountQuery, datasetIri, 0);
         final Integer amountOfTriplesInDataset = countQueryExecutor.runCountQuery();
@@ -86,7 +93,7 @@ public class RdfToMotivoConverter {
                 writer.write(id+1 + " " + numberOfEdges);
                 writer.newLine();
                 for (int i = 0; i < id; i++) {
-                    List<Integer> adjacents = connections.get(i);
+                    Set<Integer> adjacents = connections.get(i);
                     if ((null != adjacents) && (!adjacents.isEmpty())) {
                         writer.write(Integer.toString(i));
                         for (Integer adjacent : adjacents) {
@@ -122,9 +129,9 @@ public class RdfToMotivoConverter {
         Integer subjectId = replacementsMap.get(subject);
         Integer objectId = replacementsMap.get(objectAsString);
 
-        LinkedList<Integer> adjacents = null;
+        Set<Integer> adjacents = null;
         if (!connections.containsKey(subjectId)) {
-            adjacents = new LinkedList<>();
+            adjacents = new HashSet<>();
             adjacents.add(objectId);
             connections.put(subjectId, adjacents);
         } else {

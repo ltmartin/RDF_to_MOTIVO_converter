@@ -5,9 +5,7 @@ import org.apache.jena.graph.Triple;
 import org.apache.jena.query.*;
 import org.springframework.util.Assert;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -24,7 +22,7 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
     private Boolean runQuery = false;
     private String datasetIri;
     private Integer amountOfTriplesInDataset;
-    private LinkedList<QueryExecutor> executors;
+    private Queue<QueryExecutor> executors;
 
 
     public QueryExecutor(String endpoint, String query, String datasetIri, Integer amountOfTriplesInDataset) {
@@ -37,12 +35,13 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
 
     public Set<Triple> runSelectQuery() {
         Assert.notNull(query, "The query must be set in advance.");
-        logger.log(Level.INFO, "Processing query: " + query);
+        logger.log(Level.ALL, "Processing query: " + query);
+        System.out.println("Processing query: " + query);
         results = new HashSet<>();
         try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
-            qexec.setTimeout(5, TimeUnit.MINUTES);
+            qexec.setTimeout(5, TimeUnit.DAYS);
             ResultSet rs = qexec.execSelect();
-            logger.log(Level.INFO, "Query results obtained.");
+            logger.log(Level.ALL, "Query results obtained.");
             while (rs.hasNext()) {
                 QuerySolution row = rs.next();
                 Node subject = row.get("?s").asNode();
@@ -51,12 +50,14 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
                 Triple triple = new Triple(subject, predicate, object);
                 results.add(triple);
             }
-            logger.log(Level.INFO, "Query results processed.");
+            logger.log(Level.ALL, "Query results processed.");
+            System.out.println("Query results processed.");
         } catch (QueryParseException e) {
             System.out.println("===============================================");
             logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
             System.out.println("===============================================");
         }
+
         return results;
     }
 
@@ -75,7 +76,8 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
             logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
             System.out.println("===============================================");
         }
-
+        System.out.println("Amount of triples: " + countResult);
+        logger.log(Level.ALL, "Amount of triples: " + countResult);
         return countResult;
     }
 
@@ -90,31 +92,38 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
 
     @Override
     protected Set<Triple> compute() {
+        System.out.println("Compute method.");
+        logger.log(Level.ALL, "Compute method.");
+        Integer numberOfThreads = 32;
         if (runQuery)
             runSelectQuery();
         else {
 
-            final Integer cpuCount = Runtime.getRuntime().availableProcessors();
             final Integer triplesPerQuery = 5000;
             Integer triplesRetrieved = 0;
 
             for (int i = 0; triplesRetrieved < amountOfTriplesInDataset; i++) {
-                String query = "SELECT DISTINCT ?s ?p ?o FROM <" + datasetIri + "> WHERE {?s ?p ?o} LIMIT " + triplesPerQuery.toString() + " OFFSET " + i * triplesPerQuery;
+                String query = "SELECT ?s ?p ?o FROM <" + datasetIri + "> WHERE {?s ?p ?o} LIMIT " + triplesPerQuery.toString() + " OFFSET " + i * triplesPerQuery;
                 triplesRetrieved += 5000;
                 QueryExecutor queryExecutor = new QueryExecutor(endpoint, query, datasetIri, amountOfTriplesInDataset);
                 queryExecutor.setRunQuery(true);
                 executors.add(queryExecutor);
             }
 
-            for (int i = 0; i < executors.size() - 1; i++) {
-                executors.get(i).fork();
-            }
-            results = executors.get(executors.size() - 1).compute();
+            while (!executors.isEmpty()) {
+                List<QueryExecutor> forkedExecutors = new LinkedList<>();
+                for (int i = 0; (executors.size() > 1) && (i < numberOfThreads - 1); i++) {
+                    QueryExecutor executor = executors.poll();
+                    executor.fork();
+                    forkedExecutors.add(executor);
+                }
+                results = executors.poll().compute();
 
-            for (int i = 0; i < executors.size() - 1; i++) {
-                results.addAll(executors.get(i).join());
+                for (int i = 0; i < forkedExecutors.size(); i++) {
+                    results.addAll(forkedExecutors.get(i).join());
+                }
             }
         }
-        return results;
+        return (results != null)? results : new HashSet<>();
     }
 }
