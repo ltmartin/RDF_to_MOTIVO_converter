@@ -2,10 +2,8 @@ package base.converters;
 
 import base.Application;
 import base.utils.QueryExecutor;
-import org.apache.commons.collections.set.SynchronizedSet;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -16,8 +14,6 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.logging.Level;
@@ -29,9 +25,7 @@ public class RdfToMotivoConverter {
     private final Logger logger = Logger.getLogger(Application.class.getName());
 
     private final static Charset ENCODING = StandardCharsets.UTF_8;
-    @Value("${sparql.endpoint}")
     private String endpoint;
-    @Value("${sparql.dataset_IRI}")
     private String datasetIri;
 
     private ConcurrentMap<String, Integer> replacementsMap;
@@ -41,11 +35,15 @@ public class RdfToMotivoConverter {
     private Set<Triple> triples;
 
     public RdfToMotivoConverter() {
+        this.endpoint = endpoint;
+        this.datasetIri = datasetIri;
         replacementsMap = new ConcurrentHashMap();
         connections = new ConcurrentHashMap<>();
     }
 
-    public void convert() {
+    public void convert(String endpoint, String datasetIri) {
+        this.endpoint = endpoint;
+        this.datasetIri = datasetIri;
         System.out.println("Convert");
         logger.log(Level.ALL, "Convert");
         final String triplesCountQuery = "SELECT (count(*) AS " + QueryExecutor.COUNT_VAR_NAME + ") FROM <" + datasetIri + "> WHERE {?s ?p ?o}";
