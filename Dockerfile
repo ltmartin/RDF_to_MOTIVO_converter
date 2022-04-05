@@ -1,7 +1,8 @@
-FROM centos
+FROM debian:stable
 MAINTAINER Leandro Tabares Martín <ltmartin198@gmail.com>
-RUN yum update -y && yum upgrade -y
-RUN yum install -y java-11-openjdk.x86_64
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get install -y openjdk-17-jre
 RUN mkdir converter
 COPY target/RDF_to_MOTIVO_converter-1.0.jar /converter/
 COPY src/main/resources/application.properties /converter/
