@@ -9,3 +9,4 @@ COPY src/main/resources/application.properties /converter/
 WORKDIR /converter
 RUN mkdir output
 VOLUME ["/converter/output"]
+CMD ["java", "-jar", "RDF_to_MOTIVO_converter-1.0.jar"]
