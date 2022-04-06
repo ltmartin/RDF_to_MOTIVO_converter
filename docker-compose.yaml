@@ -25,4 +25,4 @@ services:
     - "8890:8890"
 volumes:
    virtuoso-database:
-     driver: local
+     external: true
