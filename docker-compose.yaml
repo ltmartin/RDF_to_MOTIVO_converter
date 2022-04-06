@@ -23,5 +23,3 @@ services:
     - virtuoso-database:/database
     ports:
     - "8890:8890"
-volumes:
-   virtuoso-database:
