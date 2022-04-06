@@ -5,6 +5,7 @@ import org.apache.jena.graph.Triple;
 import org.apache.jena.query.*;
 import org.springframework.util.Assert;
 
+import java.net.ConnectException;
 import java.util.*;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.TimeUnit;
@@ -38,25 +39,35 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
         logger.log(Level.ALL, "Processing query: " + query);
         System.out.println("Processing query: " + query);
         results = new HashSet<>();
-        try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
-            qexec.setTimeout(5, TimeUnit.DAYS);
-            ResultSet rs = qexec.execSelect();
-            logger.log(Level.ALL, "Query results obtained.");
-            while (rs.hasNext()) {
-                QuerySolution row = rs.next();
-                Node subject = row.get("?s").asNode();
-                Node predicate = row.get("?p").asNode();
-                Node object = row.get("?o").asNode();
-                Triple triple = new Triple(subject, predicate, object);
-                results.add(triple);
+        boolean waitForConnection = false;
+        do {
+            try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
+                qexec.setTimeout(5, TimeUnit.DAYS);
+                ResultSet rs = qexec.execSelect();
+                logger.log(Level.ALL, "Query results obtained.");
+                while (rs.hasNext()) {
+                    QuerySolution row = rs.next();
+                    Node subject = row.get("?s").asNode();
+                    Node predicate = row.get("?p").asNode();
+                    Node object = row.get("?o").asNode();
+                    Triple triple = new Triple(subject, predicate, object);
+                    results.add(triple);
+                }
+                logger.log(Level.ALL, "Query results processed.");
+                System.out.println("Query results processed.");
+                waitForConnection = false;
+            } catch (QueryParseException e) {
+                System.out.println("===============================================");
+                logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
+                System.out.println("===============================================");
+                waitForConnection = false;
+            } catch (Exception e) {
+                waitForConnection = true;
+                System.out.println("===============================================");
+                logger.log(Level.INFO, "Waiting to connect to Virtuoso");
+                System.out.println("===============================================");
             }
-            logger.log(Level.ALL, "Query results processed.");
-            System.out.println("Query results processed.");
-        } catch (QueryParseException e) {
-            System.out.println("===============================================");
-            logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
-            System.out.println("===============================================");
-        }
+        } while (waitForConnection);
 
         return results;
     }
@@ -65,24 +76,30 @@ public class QueryExecutor extends RecursiveTask<Set<Triple>> {
         Assert.notNull(query, "The query must be set in advance.");
         Integer countResult = 0;
 
-        try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
-            ResultSet rs = qexec.execSelect();
-            while (rs.hasNext()) {
-                QuerySolution row = rs.next();
-                countResult = row.get(COUNT_VAR_NAME).asLiteral().getInt();
+        boolean waitForConnection = false;
+        do {
+            try (QueryExecution qexec = QueryExecutionFactory.sparqlService(endpoint, query)) {
+                ResultSet rs = qexec.execSelect();
+                while (rs.hasNext()) {
+                    QuerySolution row = rs.next();
+                    countResult = row.get(COUNT_VAR_NAME).asLiteral().getInt();
+                }
+                waitForConnection = false;
+            } catch (QueryParseException e) {
+                System.out.println("===============================================");
+                logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
+                System.out.println("===============================================");
+                waitForConnection = false;
+            } catch (Exception e) {
+                waitForConnection = true;
+                System.out.println("===============================================");
+                logger.log(Level.INFO, "Waiting to connect to Virtuoso");
+                System.out.println("===============================================");
             }
-        } catch (QueryParseException e) {
-            System.out.println("===============================================");
-            logger.log(Level.SEVERE, "Error processing the query: \n" + query + "\n");
-            System.out.println("===============================================");
-        }
+        } while (waitForConnection);
         System.out.println("Amount of triples: " + countResult);
         logger.log(Level.ALL, "Amount of triples: " + countResult);
         return countResult;
-    }
-
-    public Set<Triple> getResults() {
-        return results;
     }
 
     public void setRunQuery(Boolean runQuery) {
