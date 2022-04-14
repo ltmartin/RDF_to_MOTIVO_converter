@@ -14,7 +14,7 @@ services:
     stdin_open: true
     tty: true
     volumes:
-      - /tmp/converterOutput/:/converter/output
+      - ./output:/converter/output
 
   virtuoso:
     image: openlink/virtuoso-opensource-7:latest
