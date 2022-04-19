@@ -20,9 +20,9 @@ services:
     image: openlink/virtuoso-opensource-7:latest
     restart: always
     volumes:
-    - virtuoso-database:/database
+    - virtuoso_smallimdb:/database
     ports:
     - "8890:8890"
 volumes:
-   virtuoso-database:
+   virtuoso_smallimdb:
      external: true
