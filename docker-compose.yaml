@@ -1,20 +1,20 @@
 version: "3.3"
 
 services:
-#  converter:
-#    depends_on:
-#      - virtuoso
-#    links:
-#        - virtuoso
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    image: ltmartin/rdf_to_motivo_converter:latest
-#    restart: on-failure
-#    stdin_open: true
-#    tty: true
-#    volumes:
-#      - ./output:/converter/output
+  converter:
+    depends_on:
+      - virtuoso
+    links:
+        - virtuoso
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ltmartin/rdf_to_motivo_converter:latest
+    restart: on-failure
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./output:/converter/output
 
   virtuoso:
     image: openlink/virtuoso-opensource-7:latest
